@@ -17,26 +17,30 @@ def partage_equitable(n, p, w, u):
         x = MODEL.addMVar((n, p), vtype=GRB.BINARY, name="x")
         r = MODEL.addMVar(n, vtype=GRB.CONTINUOUS, lb=-GRB.INFINITY, name="r")
         b = MODEL.addMVar((n, n), vtype=GRB.CONTINUOUS, lb=0, name="b")
-        z = MODEL.addMVar(n, vtype=GRB.CONTINUOUS, name="z")
+        k = np.arange(1, n + 1)
         MODEL.update()
+
         # x的每一列的和不超过1
         MODEL.addConstr(x.sum(axis=0) <= 1, "x")
-        MODEL.addConstr(z == (u * x).sum(axis=1))
-        z = np.reshape(z, (n, 1))
-        MODEL.addConstr((r - b) <= (z * np.ones((n, n))))
-        MODEL.setObjective((w_prime * (r * np.arange(1, n + 1) - b.sum(axis=0))).sum(), GRB.MAXIMIZE)
+        # z_i = sum(u_i,j * x_i,j)
+        z = np.array([u[i, :] @ x[i, :] for i in range(n)])
+        # r_k - b_i,k - z_i <= 0
+        for k in range(n):
+            for i in range(n):
+                MODEL.addConstr(r[k] - b[i, k] - z[i] <= 0, "r")
+        MODEL.setObjective(sum(w_prime * (r * k - b.sum(axis=0))), GRB.MAXIMIZE)
         MODEL.optimize()
         # print_solution(MODEL)
         if MODEL.status == GRB.OPTIMAL:
             print("solution:")
             for i in range(n):
-                print(f"z{i} = {z[i].x}", end=" ")
+                print(f"z{i} = {z[i].getValue()}")
             print()
             for i in range(n):
                 for j in range(p):
                     if x[i, j].x > 0:
                         print(f"x{i}_{j} = {x[i, j].x}", end=" ")
-            print()
+                print()
             print("objective value = ", MODEL.objVal)
         else:
             print("No solution")
@@ -46,11 +50,12 @@ def partage_equitable(n, p, w, u):
     except gp.GurobiError as e:
         print('Error code ' + str(e.errno) + ': ' + str(e))
 
-    except AttributeError:
-        print('Encountered an attribute error')
+    # except AttributeError:
+    #     print('Encountered an attribute error')
     return MODEL.Runtime
 
 
+avg_runtime = []
 for n in (5, 10, 15, 20):
     p = 5 * n
     runtime = []
@@ -61,9 +66,22 @@ for n in (5, 10, 15, 20):
         time = partage_equitable(n, p, w, u)
         runtime.append(time)
     # output the average runtime to a file
-    with open("22mat.txt", "a") as f:
+    avg_runtime.append(np.mean(runtime))
+    with open("22.txt", "a") as f:
         f.write(f"n = {n}, p = {p}, runtime = {np.mean(runtime)}\n")
 f.close()
+
+# plot the result
+import matplotlib.pyplot as plt
+
+n = [5, 10, 15, 20]
+plt.plot(n, avg_runtime)
+plt.xlabel("n")
+plt.ylabel("average runtime")
+plt.title("average runtime of partage_equitable")
+# save as svg
+plt.savefig("22.svg")
+plt.show()
 
 # Test case
 # n = 3
