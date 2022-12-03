@@ -2,50 +2,108 @@ import gurobipy as gp
 import numpy as np
 from gurobipy import GRB
 
-from projet.utils import print_solution
 
-try:
-    MODEL = gp.Model("21")
-    n = 3
-    p = 6
-    w = [3, 2, 1]
-    w_prime = [w[i] - w[i + 1] for i in range(n - 1)]
-    w_prime.append(w[n - 1])
-    index = range(n)
-    xj = range(p)
-    x = MODEL.addVars(index, xj, vtype=GRB.BINARY, name="x")
-    r = MODEL.addVars(index, vtype=GRB.CONTINUOUS, lb=-GRB.INFINITY, name="r")
-    b = MODEL.addVars(index, index, vtype=GRB.CONTINUOUS, lb=0, name="b")
-    u = np.array([[325, 225, 210, 115, 75, 50]])
-    u = np.repeat(u, 3, axis=0)
-    z = MODEL.addVars(index, vtype=GRB.CONTINUOUS, name="z")
-    MODEL.update()
-    MODEL.addConstrs((gp.quicksum(x[i, j] for i in index) <= 1 for j in xj), "x")
-    MODEL.addConstrs((z[i] == gp.quicksum(u[i][j] * x[i, j] for j in xj) for i in index))
-    MODEL.addConstrs((r[i] - b[i, j] <= z[j] for i in index for j in index))
-    MODEL.setObjective(gp.quicksum(w_prime[k] * (k * r[k] - gp.quicksum(b[i, k] for i in index)) for k in index),
-                       GRB.MAXIMIZE)
-    MODEL.optimize()
-    print_solution(MODEL)
+def partage_equitable(n, p, w, u):
+    try:
+        MODEL = gp.Model("21")
 
-except gp.GurobiError as e:
-    print('Error code ' + str(e.errno) + ': ' + str(e))
+        w_prime = [w[i] - w[i + 1] for i in range(n - 1)]
+        w_prime.append(w[n - 1])
+        w_prime = np.array(w_prime)
 
-except AttributeError:
-    print('Encountered an attribute error')
+        x = MODEL.addMVar((n, p), vtype=GRB.BINARY, name="x")
+        r = MODEL.addMVar(n, vtype=GRB.CONTINUOUS, lb=-GRB.INFINITY, name="r")
+        b = MODEL.addMVar((n, n), vtype=GRB.CONTINUOUS, lb=0, name="b")
+        k = np.arange(1, n + 1)
+        MODEL.update()
 
-try:
-    MODEL = gp.Model("maximisant la satsifaction moyenne")
-    z = MODEL.addVars(index, vtype=GRB.CONTINUOUS, name="z")
-    x = MODEL.addVars(index, xj, vtype=GRB.BINARY, name="x")
-    MODEL.update()
-    MODEL.addConstrs((gp.quicksum(x[i, j] for i in index) <= 1 for j in xj), "x")
-    MODEL.addConstrs((z[i] == gp.quicksum(u[i][j] * x[i, j] for j in xj) for i in index))
-    MODEL.setObjective(gp.quicksum(z[i] for i in index) / n, GRB.MAXIMIZE)
-    MODEL.optimize()
-    print_solution(MODEL)
-except gp.GurobiError as e:
-    print('Error code ' + str(e.errno) + ': ' + str(e))
+        # x的每一列的和不超过1
+        MODEL.addConstr(x.sum(axis=0) <= 1, "x")
+        # z_i = sum(u_i,j * x_i,j)
+        z = np.array([u[i, :] @ x[i, :] for i in range(n)])
+        # r_k - b_i,k - z_i <= 0
+        for k in range(n):
+            for i in range(n):
+                MODEL.addConstr(r[k] - b[i, k] - z[i] <= 0, "r")
+        MODEL.setObjective(sum(w_prime * (r * k - b.sum(axis=0))), GRB.MAXIMIZE)
+        MODEL.optimize()
+        # print_solution(MODEL)
+        print(f"w = {w}")
+        print(f"u = {u}")
+        print(f"w' = {w_prime}")
+        if MODEL.status == GRB.OPTIMAL:
+            print("solution:")
+            for i in range(n):
+                print(f"z{i} = {z[i].getValue()}")
+            print()
+            for i in range(n):
+                for j in range(p):
+                    if x[i, j].x > 0:
+                        print(f"x{i}_{j} = {x[i, j].x}", end=" ")
+                print()
+            print("objective value = ", MODEL.objVal)
+        else:
+            print("No solution")
+        # print solution time
+        print("solution time = ", MODEL.Runtime, "s")
 
-except AttributeError:
-    print('Encountered an attribute error')
+    except gp.GurobiError as e:
+        print('Error code ' + str(e.errno) + ': ' + str(e))
+
+    # except AttributeError:
+    #     print('Encountered an attribute error')
+    return MODEL.Runtime
+
+
+def max_satsifaction_moyenne(n, p, w, u):
+    try:
+        MODEL = gp.Model("21")
+
+        x = MODEL.addMVar((n, p), vtype=GRB.BINARY, name="x")
+
+        MODEL.update()
+
+        # x的每一列的和不超过1
+        MODEL.addConstr(x.sum(axis=0) <= 1, "x")
+        # z_i = sum(u_i,j * x_i,j)
+        z = np.array([u[i, :] @ x[i, :] for i in range(n)])
+
+        MODEL.setObjective(gp.quicksum(z), GRB.MAXIMIZE)
+        MODEL.optimize()
+        # print_solution(MODEL)
+        print(f"w = {w}")
+        print(f"u = {u}")
+
+        if MODEL.status == GRB.OPTIMAL:
+            print("solution:")
+            for i in range(n):
+                print(f"z{i} = {z[i].getValue()}")
+            print()
+            for i in range(n):
+                for j in range(p):
+                    if x[i, j].x > 0:
+                        print(f"x{i}_{j} = {x[i, j].x}", end=" ")
+                print()
+            print("objective value = ", MODEL.objVal)
+        else:
+            print("No solution")
+        # print solution time
+        print("solution time = ", MODEL.Runtime, "s")
+
+    except gp.GurobiError as e:
+        print('Error code ' + str(e.errno) + ': ' + str(e))
+
+    # except AttributeError:
+    #     print('Encountered an attribute error')
+    return MODEL.Runtime
+
+
+n = 3
+p = 6
+w = [3, 2, 1]
+u = np.array([[325, 225, 210, 115, 75, 50]])
+u = np.repeat(u, 3, axis=0)
+partage_equitable(n, p, w, u)
+max_satsifaction_moyenne(n, p, w, u)
+w = [10, 3, 1]
+partage_equitable(n, p, w, u)
