@@ -4,12 +4,12 @@ from gurobipy import GRB
 
 from utils import print_solution
 
-def selection_multicritere_projet(c, budget, w, z_coefficient, print=False):
+def selection_multicritere_projet(c, budget, w, u):
     """
     :param c: liste des coûts des projets
     :param budget: budget a ne pas dépasser
     :param w: liste des poids des objectifs
-    :param z_coefficient: matrice des utilités de chaque projet pour chaque objectif
+    :param u: matrice des utilités de chaque projet pour chaque objectif
     """
     try:
         MODEL = gp.Model("31")
@@ -30,16 +30,15 @@ def selection_multicritere_projet(c, budget, w, z_coefficient, print=False):
         MODEL.update()
         MODEL.addConstrs((x[i] <= 1 for i in index_p)) # contrainte x <= 1
         MODEL.addConstr((gp.quicksum(c[i] * x[i] for i in index_p) <= budget)) # contrainte de budget
-        MODEL.addConstrs((z[i] == gp.quicksum(z_coefficient[i][j] * x[j] for j in index_p) for i in index_n)) # contrainte sur les utilités
-        MODEL.addConstrs((r[i] - b[i, j] <= z[j] for i in index_n for j in index_n))
+        MODEL.addConstrs((z[i] == gp.quicksum(u[i][j] * x[j] for j in index_p) for i in index_n)) # contrainte sur les utilités
+        MODEL.addConstrs((r[k] - b[i, k] <= z[i] for i in index_n for k in index_n))
 
         # ajout de la fonction objectif
         MODEL.setObjective(gp.quicksum(w_prime[k] * (k * r[k] - gp.quicksum(b[i, k] for i in index_n)) for k in index_n),
                         GRB.MAXIMIZE)
         MODEL.optimize()
-
+        
         return MODEL
-
 
     except gp.GurobiError as e:
         print('Error code ' + str(e.errno) + ': ' + str(e))
@@ -48,15 +47,15 @@ def selection_multicritere_projet(c, budget, w, z_coefficient, print=False):
         print('Encountered an attribute error')
 
 
-def selection_multicritere_projet_moyenne(c, budget, z_coefficient):
+def selection_multicritere_projet_moyenne(c, budget, u):
     """
     :param c: liste des coûts des projets
     :param budget: budget à ne pas dépasser
-    :param z_coefficient: matrice des utilités de chaque projet pour chaque objectif
+    :param u: matrice des utilités de chaque projet pour chaque objectif
     """
     try:
         MODEL = gp.Model("31")
-        n = len(z_coefficient) # nombre d'objectif
+        n = len(u) # nombre d'objectif
         p = len(c) # nombre de projet
         index_n = range(n)
         index_p = range(p)
@@ -69,7 +68,7 @@ def selection_multicritere_projet_moyenne(c, budget, z_coefficient):
         MODEL.update()
         MODEL.addConstrs((x[i] <= 1 for i in index_p)) # contrainte x <= 1
         MODEL.addConstr((gp.quicksum(c[i] * x[i] for i in index_p) <= budget)) # contrainte de budget
-        MODEL.addConstrs((z[i] == gp.quicksum(z_coefficient[i][j] * x[j] for j in index_p) for i in index_n)) # contrainte sur les utilités
+        MODEL.addConstrs((z[i] == gp.quicksum(u[i][j] * x[j] for j in index_p) for i in index_n)) # contrainte sur les utilités
 
         # ajout de la fonction objectif
         MODEL.setObjective(gp.quicksum(z[i] for i in index_n) / n, GRB.MAXIMIZE)
@@ -84,20 +83,23 @@ def selection_multicritere_projet_moyenne(c, budget, z_coefficient):
         print('Encountered an attribute error')
 
 
-z_coefficient = np.array([[19, 6, 17, 2],
-                          [2, 11, 4, 18]])
+u = np.array([[19, 6, 17, 2],
+              [2, 11, 4, 18]])
 c = np.array([40, 50, 60, 50])
 budget = 100
 w1 = [2, 1]
-w2 = [10, 1]
+w2 = [10, 9]
 
-selection_1 = selection_multicritere_projet(c, budget, w1, z_coefficient)
-selection_2 = selection_multicritere_projet(c, budget, w2, z_coefficient)
-seleection_moyenne = selection_multicritere_projet_moyenne(c, budget, z_coefficient)
+selection_1 = selection_multicritere_projet(c, budget, w1, u)
+selection_2 = selection_multicritere_projet(c, budget, w2, u)
+selection_moyenne = selection_multicritere_projet_moyenne(c, budget, u)
 
-print("Solution avec w1 =", w1,": ")
+print("w =", w1)
+print("Solution avec w1:")
 print_solution(selection_1)
-print("\nSolution avec w2 =", w2,": ")
+print("\nw =", w2)
+print("Solution avec w2 =:")
 print_solution(selection_2)
-print("\nSolution maximisant la satisfaction moyenne des objectifs : ")
-print_solution(seleection_moyenne)
+
+print("\nSolution maximisant la satisfaction moyenne des objectifs:")
+print_solution(selection_moyenne)
