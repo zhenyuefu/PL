@@ -29,7 +29,6 @@ w_prime.append(w[n - 1])
 w_prime = np.array(w_prime)
 # Create variables
 x = gp.tupledict()
-s = gp.tupledict()
 for i, j in G.edges():
     x[i, j] = m.addVar(vtype=GRB.BINARY, name=f'x_{i}_{j}')
 r = m.addMVar(n, vtype=GRB.CONTINUOUS, lb=-GRB.INFINITY, name="r")
