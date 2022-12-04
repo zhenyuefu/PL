@@ -17,24 +17,21 @@ def selection_multicritere_projet(c, budget, w, u):
         p = len(c) # nombre de projet
         w_prime = [w[i] - w[i + 1] for i in range(n - 1)]
         w_prime.append(w[n - 1])
-        index_n = range(n)
-        index_p = range(p)
 
         # ajout des variables
         x = MODEL.addVars(p, vtype=GRB.BINARY, name="x") # projet auquel on attribue le budget
         r = MODEL.addVars(n, vtype=GRB.CONTINUOUS, lb=-GRB.INFINITY, name="r")
         b = MODEL.addVars(n, n, vtype=GRB.CONTINUOUS, lb=0, name="b")
-        z = MODEL.addVars(n, vtype=GRB.CONTINUOUS, name="z")
+        z = [sum(u[i][j] * x[j] for j in range(p)) for i in range(n)]
 
         # ajout des contraintes
         MODEL.update()
-        MODEL.addConstrs((x[i] <= 1 for i in index_p)) # contrainte x <= 1
-        MODEL.addConstr((gp.quicksum(c[i] * x[i] for i in index_p) <= budget)) # contrainte de budget
-        MODEL.addConstrs((z[i] == gp.quicksum(u[i][j] * x[j] for j in index_p) for i in index_n)) # contrainte sur les utilités
-        MODEL.addConstrs((r[k] - b[i, k] <= z[i] for i in index_n for k in index_n))
+        MODEL.addConstrs((x[i] <= 1 for i in range(p))) # contrainte x <= 1
+        MODEL.addConstr((gp.quicksum(c[i] * x[i] for i in range(p)) <= budget)) # contrainte de budget
+        MODEL.addConstrs((r[k] - b[i, k] <= z[i] for i in range(n) for k in range(n)))
 
         # ajout de la fonction objectif
-        MODEL.setObjective(gp.quicksum(w_prime[k] * (k * r[k] - gp.quicksum(b[i, k] for i in index_n)) for k in index_n),
+        MODEL.setObjective(gp.quicksum(w_prime[k] * ((k+1) * r[k] - gp.quicksum(b[i, k] for i in range(n))) for k in range(n)),
                         GRB.MAXIMIZE)
         MODEL.optimize()
         
@@ -47,10 +44,10 @@ def selection_multicritere_projet(c, budget, w, u):
         print('Encountered an attribute error')
 
 avg_runtime_n = []
-runtime_p = {i: [] for i in [5, 10, 15, 20, 50, 100, 200]}
-for n in (2, 5, 10, 20):
+runtime_p = {i: [] for i in [5, 10, 15, 20, 50, 75, 100]}
+for n in (2, 5, 10, 20, 30):
     avg_runtime = []
-    for p in (5, 10, 15, 20, 50, 100, 200):
+    for p in (5, 10, 15, 20, 50, 75, 100):
         runtime = []
         for i in range(10):
             c = np.random.randint(0, 100, p)
@@ -73,21 +70,26 @@ avg_runtime_p = [np.mean(runtime_p[i]) for i in runtime_p]
 # plot the result
 import matplotlib.pyplot as plt
 
-n = [2, 5, 10, 20]
+n = [2, 5, 10, 20, 30]
 plt.plot(n, avg_runtime_n)
 plt.xlabel("n")
 plt.ylabel("average runtime")
 plt.title("average runtime of selection_multicritere_projet acoording to n")
 # save as svg
-plt.savefig("32_n.svg")
+plt.savefig("32_n.png")
 plt.show()
+ratio_n = np.mean([(avg_runtime_n[i]-avg_runtime_n[i-1]) / (n[i]-n[i-1]) for i in range(1, len(n))])
 
-p= [5, 10, 15, 20, 50, 100, 200]
+p= [5, 10, 15, 20, 50, 75, 100]
 print(avg_runtime_p)
 plt.plot(p, avg_runtime_p)
 plt.xlabel("p")
 plt.ylabel("average runtime")
 plt.title("average runtime of selection_multicritere_projet acoording to p")
 # save as svg
-plt.savefig("32_p.svg")
+plt.savefig("32_p.png")
 plt.show()
+
+ratio_p = np.mean([(avg_runtime_p[i]-avg_runtime_p[i-1]) / (p[i]-p[i-1]) for i in range(1, len(p))])
+print(ratio_n)
+print(ratio_p)
