@@ -1,0 +1,11 @@
+### requirements
+
+- gurobi version above 9 (only tested with 10.0.0)
+- numpy
+- scipy
+- matplotlib
+- networkx
+
+### execution
+run the python script with the following command:
+    `python3 [question number].py`

@@ -55,23 +55,18 @@ def partage_equitable(n, p, w, u):
     return MODEL.Runtime
 
 
-def max_satisfaction_moyenne(n, p, w, u):
+def max_satisfaction_moyenne(n, p, u):
     try:
         MODEL = gp.Model("21")
-
         x = MODEL.addMVar((n, p), vtype=GRB.BINARY, name="x")
-
         MODEL.update()
 
-        # x的每一列的和不超过1
         MODEL.addConstr(x.sum(axis=0) <= 1, "x")
         # z_i = sum(u_i,j * x_i,j)
         z = np.array([u[i, :] @ x[i, :] for i in range(n)])
 
         MODEL.setObjective(gp.quicksum(z), GRB.MAXIMIZE)
         MODEL.optimize()
-        # print_solution(MODEL)
-        print(f"w = {w}")
         print(f"u = {u}")
 
         if MODEL.status == GRB.OPTIMAL:
@@ -104,6 +99,6 @@ w = [3, 2, 1]
 u = np.array([[325, 225, 210, 115, 75, 50]])
 u = np.repeat(u, 3, axis=0)
 partage_equitable(n, p, w, u)
-max_satisfaction_moyenne(n, p, w, u)
 w = [10, 3, 1]
 partage_equitable(n, p, w, u)
+max_satisfaction_moyenne(n, p, u)
