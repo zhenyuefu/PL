@@ -55,7 +55,7 @@ def partage_equitable(n, p, w, u):
     return MODEL.Runtime
 
 
-def max_satsifaction_moyenne(n, p, w, u):
+def max_satisfaction_moyenne(n, p, w, u):
     try:
         MODEL = gp.Model("21")
 
@@ -104,6 +104,6 @@ w = [3, 2, 1]
 u = np.array([[325, 225, 210, 115, 75, 50]])
 u = np.repeat(u, 3, axis=0)
 partage_equitable(n, p, w, u)
-max_satsifaction_moyenne(n, p, w, u)
+max_satisfaction_moyenne(n, p, w, u)
 w = [10, 3, 1]
 partage_equitable(n, p, w, u)
