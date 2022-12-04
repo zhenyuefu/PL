@@ -18,12 +18,12 @@ def partage_equitable(n, p, w, u):
         r = MODEL.addMVar(n, vtype=GRB.CONTINUOUS, lb=-GRB.INFINITY, name="r")
         b = MODEL.addMVar((n, n), vtype=GRB.CONTINUOUS, lb=0, name="b")
         k = np.arange(1, n + 1)
+        # z_i = sum(u_i,j * x_i,j)
+        z = np.array([u[i, :] @ x[i, :] for i in range(n)])
         MODEL.update()
 
         # x的每一列的和不超过1
         MODEL.addConstr(x.sum(axis=0) <= 1, "x")
-        # z_i = sum(u_i,j * x_i,j)
-        z = np.array([u[i, :] @ x[i, :] for i in range(n)])
         # r_k - b_i,k - z_i <= 0
         for k in range(n):
             for i in range(n):
@@ -56,7 +56,7 @@ def partage_equitable(n, p, w, u):
 
 
 avg_runtime = []
-for n in (5, 10, 15, 20):
+for n in (5, 10, 15, 20, 25):
     p = 5 * n
     runtime = []
     for i in range(10):
@@ -74,7 +74,7 @@ f.close()
 # plot the result
 import matplotlib.pyplot as plt
 
-n = [5, 10, 15, 20]
+n = [5, 10, 15, 20, 25]
 plt.plot(n, avg_runtime)
 plt.xlabel("n")
 plt.ylabel("average runtime")
