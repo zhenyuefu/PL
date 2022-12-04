@@ -34,12 +34,12 @@ def partage_equitable(n, p, w, u):
         if MODEL.status == GRB.OPTIMAL:
             print("solution:")
             for i in range(n):
-                print(f"z{i} = {z[i].getValue()}")
+                print(f"z{i + 1} = {z[i].getValue()}")
             print()
             for i in range(n):
                 for j in range(p):
                     if x[i, j].x > 0:
-                        print(f"x{i}_{j} = {x[i, j].x}", end=" ")
+                        print(f"x{i + 1}_{j + 1} = {x[i, j].x}", end=" ")
                 print()
             print("objective value = ", MODEL.objVal)
         else:
@@ -77,12 +77,12 @@ def max_satisfaction_moyenne(n, p, w, u):
         if MODEL.status == GRB.OPTIMAL:
             print("solution:")
             for i in range(n):
-                print(f"z{i} = {z[i].getValue()}")
+                print(f"z{i + 1} = {z[i].getValue()}")
             print()
             for i in range(n):
                 for j in range(p):
                     if x[i, j].x > 0:
-                        print(f"x{i}_{j} = {x[i, j].x}", end=" ")
+                        print(f"x{i + 1}_{j + 1} = {x[i, j].x}", end=" ")
                 print()
             print("objective value = ", MODEL.objVal)
         else:
