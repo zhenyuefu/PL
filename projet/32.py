@@ -37,15 +37,8 @@ def selection_multicritere_projet(c, budget, w, u):
         MODEL.setObjective(gp.quicksum(w_prime[k] * (k * r[k] - gp.quicksum(b[i, k] for i in index_n)) for k in index_n),
                         GRB.MAXIMIZE)
         MODEL.optimize()
-        print("w = ", w)
-        print("u = ", u)
-        print("c = ", c)
-        print("budget = ", budget)
-        print("x = ", [x[i].x for i in index_p])
-        print("z = ", [z[i].x for i in index_n])
-        print("obj = ", MODEL.objVal)
         
-        return MODEL
+        return MODEL.Runtime
 
     except gp.GurobiError as e:
         print('Error code ' + str(e.errno) + ': ' + str(e))
@@ -53,8 +46,11 @@ def selection_multicritere_projet(c, budget, w, u):
     except AttributeError:
         print('Encountered an attribute error')
 
-for n in (2, 5, 10):
-    for p in (5, 10, 15, 20):
+avg_runtime_n = []
+runtime_p = {i: [] for i in [5, 10, 15, 20, 50, 100, 200]}
+for n in (2, 5, 10, 20):
+    avg_runtime = []
+    for p in (5, 10, 15, 20, 50, 100, 200):
         runtime = []
         for i in range(10):
             c = np.random.randint(0, 100, p)
@@ -65,6 +61,33 @@ for n in (2, 5, 10):
             time = selection_multicritere_projet(c, b, w, u)
             runtime.append(time)
         # output the average runtime to a file
+        avg_runtime.append(np.mean(runtime))
+        runtime_p[p].append(np.mean(runtime))
         with open("32mat.txt", "a") as f:
             f.write(f"n = {n}, p = {p}, runtime = {np.mean(runtime)}\n")
+    avg_runtime_n.append(np.mean(avg_runtime))
 f.close()
+avg_runtime_p = [np.mean(runtime_p[i]) for i in runtime_p]
+
+
+# plot the result
+import matplotlib.pyplot as plt
+
+n = [2, 5, 10, 20]
+plt.plot(n, avg_runtime_n)
+plt.xlabel("n")
+plt.ylabel("average runtime")
+plt.title("average runtime of selection_multicritere_projet acoording to n")
+# save as svg
+plt.savefig("32_n.svg")
+plt.show()
+
+p= [5, 10, 15, 20, 50, 100, 200]
+print(avg_runtime_p)
+plt.plot(p, avg_runtime_p)
+plt.xlabel("p")
+plt.ylabel("average runtime")
+plt.title("average runtime of selection_multicritere_projet acoording to p")
+# save as svg
+plt.savefig("32_p.svg")
+plt.show()
